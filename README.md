@@ -47,7 +47,8 @@ Example:
 ### Non-printable character
 
 ngrep use by default '*' for non-printable character.
-nsniffer user by default '%'.
+
+nsniffer use by default '%'.
 
 If necessary, this character can be replaced via the variable 'non_printable_char'.
 
