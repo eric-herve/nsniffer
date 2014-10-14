@@ -98,7 +98,7 @@ If necessary, this character can be replaced via the variable 'non_printable_cha
 # ./nsniffer.py -d any -tl -S 256 -f -m 'test'
 /*----------------------------------------*/
 
-195.154.118.114:46738 > 173.194.71.94:80 (sd-21861.dedibox.fr > lb-in-f94.1e100.net)
+xxx.xxx.xxx.xxx:46738 > 173.194.71.94:80 (xxxxxxxxxxxxxxx > lb-in-f94.1e100.net)
 service  : www (T)
 duration : 0.04396s
 request (2014/10/11 17:24:32.576231)
@@ -128,5 +128,5 @@ Alternate-Protocol: 80:quic,p=0.01%
 ```
 ./nsniffer.py -d eth0 -S 256 -f -m 'test' -v 'batch'
 ;;;;dst;;;;src;;;;service;;;;start_time;;;;end_time;;;;duration;;;;request_content;;;;response_content
-;;;;195.154.118.114:46739;;;;173.194.71.94:80;;;;www;;;;2014/10/11 17:37:10.748520;;;;2014/10/11 17:37:10.794552;;;;0.04603;;;;GET /test HTTP/1.0%Host: www.google.fr%Accept: text/html, text/plain, text/css, text/sgml, */*;q=0.01%Accept-Encoding: gzip, compress, bzip2%Accept-Language: en%User-Agent: Lynx/2.8.8dev.5 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/2.8.6%%;;;;HTTP/1.0 404 Not Found%Content-Type: text/html; charset=UTF-8%X-Content-Type-Options: nosniff%Date: Sat, 11 Oct 2014 15:37:07 GMT%Server: sffe%Content-Length: 1429%X-XSS-Protection: 1; mode=block%Alternate-Protocol: 80:quic,p=0.01%%<!DOCTYPE html><html lan
+;;;;xxx.xxx.xxx.xxx:46739;;;;173.194.71.94:80;;;;www;;;;2014/10/11 17:37:10.748520;;;;2014/10/11 17:37:10.794552;;;;0.04603;;;;GET /test HTTP/1.0%Host: www.google.fr%Accept: text/html, text/plain, text/css, text/sgml, */*;q=0.01%Accept-Encoding: gzip, compress, bzip2%Accept-Language: en%User-Agent: Lynx/2.8.8dev.5 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/2.8.6%%;;;;HTTP/1.0 404 Not Found%Content-Type: text/html; charset=UTF-8%X-Content-Type-Options: nosniff%Date: Sat, 11 Oct 2014 15:37:07 GMT%Server: sffe%Content-Length: 1429%X-XSS-Protection: 1; mode=block%Alternate-Protocol: 80:quic,p=0.01%%<!DOCTYPE html><html lan
 ```
