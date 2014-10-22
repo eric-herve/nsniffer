@@ -13,6 +13,45 @@ It essentially allows :
 
 It is only compatible with IPv4 and TCP/UDP.
 
+## Configuration
+
+### Requirement
+
+- ngrep 1.x
+- python 2.7
+
+### Services
+
+This script uses '/etc/services' to identify services. 
+For services that are not in this database, you can add them into the dictionnary 'services_custom' of the script.
+
+```
+services_custom = {
+    'T81': 'www',
+    'T3307': 'mysql',
+    'T8080': 'www',
+    'T8081': 'www',
+    'T61613': 'activemq',
+    'T61616': 'activemq'
+}
+```
+
+Just simply add a key and a value as follows (protocol = 'T' for 'tcp' or 'U' for 'udp') :
+
+`'<protocol><port_number>', '<name>'`
+
+Example: 
+
+`'T3307', 'mysql'`
+
+### Non-printable character
+
+ngrep use by default '*' for non-printable character.
+
+nsniffer use by default '%'.
+
+If necessary, this character can be replaced via the variable 'non_printable_char'.
+
 ## Arguments
 
 `-d DEVICE, --device DEVICE` By default ngrep will select a default interface to listen on. Use this option to force ngrep to listen on interface DEVICE ('any' for all).
@@ -55,14 +94,39 @@ It is only compatible with IPv4 and TCP/UDP.
 
 ## Examples
 
-`# timeout 3600 ./nsniffer.py -d eth0 -f -D 2 -O /var/log/ngrep.pcap`
+```
+# ./nsniffer.py -d any -tl -S 256 -f -m 'test'
+/*----------------------------------------*/
 
-`# ./nsniffer.py -d eth0 -c -D 3 -I /var/log/ngrep.pcap`
+xxx.xxx.xxx.xxx:46738 > 173.194.71.94:80 (xxxxxxxxxxxxxxx > lb-in-f94.1e100.net)
+service  : www (T)
+duration : 0.04396s
+request (2014/10/11 17:24:32.576231)
 
-`#./nsniffer.py -d any -t --no-response-content`
+GET /test HTTP/1.0%
+Host: www.google.fr%
+Accept: text/html, text/plain, text/css, text/sgml, */*;q=0.01%
+Accept-Encoding: gzip, compress, bzip2%
+Accept-Language: en%
+User-Agent: Lynx/2.8.8dev.5 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/2.8.6%
+%
 
-`# ./nsniffer.py -d any -F 'host 1.2.3.4' -v pretty -m 'GET|POST' -lc`
+response (2014/10/11 17:24:32.620190)
 
-`# ./nsniffer.py -d any -F 'port 80' -tc -m 'GET \S*|HTTP/1.1 [12345][\d]{2}' -S 256 -D 0.2 -v batch`
+HTTP/1.0 404 Not Found%
+Content-Type: text/html; charset=UTF-8%
+X-Content-Type-Options: nosniff%
+Date: Sat, 11 Oct 2014 15:24:29 GMT%
+Server: sffe%
+Content-Length: 1429%
+X-XSS-Protection: 1; mode=block%
+Alternate-Protocol: 80:quic,p=0.01%
+%
+<!DOCTYPE html
+```
 
-`# ./nsniffer.py -d any -F 'port 80' -tcf -m 'GET|HTTP/1.1 [45][\d]{2}' --response-content-size=50`
+```
+./nsniffer.py -d eth0 -S 256 -f -m 'test' -v 'batch'
+;;;;dst;;;;src;;;;service;;;;start_time;;;;end_time;;;;duration;;;;request_content;;;;response_content
+;;;;xxx.xxx.xxx.xxx:46739;;;;173.194.71.94:80;;;;www;;;;2014/10/11 17:37:10.748520;;;;2014/10/11 17:37:10.794552;;;;0.04603;;;;GET /test HTTP/1.0%Host: www.google.fr%Accept: text/html, text/plain, text/css, text/sgml, */*;q=0.01%Accept-Encoding: gzip, compress, bzip2%Accept-Language: en%User-Agent: Lynx/2.8.8dev.5 libwww-FM/2.14 SSL-MM/1.4.1 GNUTLS/2.8.6%%;;;;HTTP/1.0 404 Not Found%Content-Type: text/html; charset=UTF-8%X-Content-Type-Options: nosniff%Date: Sat, 11 Oct 2014 15:37:07 GMT%Server: sffe%Content-Length: 1429%X-XSS-Protection: 1; mode=block%Alternate-Protocol: 80:quic,p=0.01%%<!DOCTYPE html><html lan
+```
