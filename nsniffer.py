@@ -149,19 +149,29 @@ def display_stats():
         print
         print "- Extra stats by service :"
         for service in extra:
-            if service == 'www':
-                print "%12s :" % service
-                for host in extra[service]:
+            if service == 'http':
+                print "%7s %s by host :" % ('', service)
+                for host in sorted(extra[service]['host']):
                     print "%15sHost '%s' :" % (' ', host)
-                    for status_code in extra[service][host]:
-                        average = extra[service][host][status_code]['duration'] / \
-                            extra[service][host][status_code]['count']
+                    for status_code in sorted(extra[service]['host'][host]):
+                        average = extra[service]['host'][host][status_code]['duration'] / \
+                            extra[service]['host'][host][status_code]['count']
                         print "%20s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
-                            % (' ', status_code, extra[service][host][status_code]['count'],
-                               extra[service][host][status_code]['duration'], average,
-                               extra[service][host][status_code]['max'])
+                            % (' ', status_code, extra[service]['host'][host][status_code]['count'],
+                               extra[service]['host'][host][status_code]['duration'], average,
+                               extra[service]['host'][host][status_code]['max'])
+                print "%7s %s by host and uri level1 :" % ('', service)
+                for host in sorted(extra[service]['uri_level1']):
+                    print "%15sHost '%s' :" % (' ', host)
+                    for status_code in sorted(extra[service]['uri_level1'][host]):
+                        average = extra[service]['uri_level1'][host][status_code]['duration'] / \
+                            extra[service]['uri_level1'][host][status_code]['count']
+                        print "%20s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
+                            % (' ', status_code, extra[service]['uri_level1'][host][status_code]['count'],
+                               extra[service]['uri_level1'][host][status_code]['duration'], average,
+                               extra[service]['uri_level1'][host][status_code]['max'])
             elif service == 'mysql':
-                print "%12s :" % service
+                print "%7s %s :" % ('', service)
                 if 'command' in extra[service]:
                     print "%15sCommands :" % ' '
                     for command in sorted(extra[service]['command']):
@@ -272,6 +282,9 @@ def process(text):
             packet_type = "unknown"
             service = "unknown"
 
+        if service == 'www':
+            service = 'http'
+
         # Exclude 'R'eset requests
         if tcp_flag:
             if re.match('R', tcp_flag):
@@ -305,11 +318,14 @@ def process(text):
                         data_request[packet]['mysql_command'] = m.group(1).upper()
             #######
 
-            # EXTRA : WWW
-            if service == 'www':
+            # EXTRA : http
+            if service == 'http':
                 m = re.search(r'Host: ([\w._-]*)\%s' % non_printable_char, content, re.DOTALL)
                 if m:
-                    data_request[packet]['www_host'] = m.group(1)
+                    data_request[packet]['http_host'] = m.group(1).lower()
+                m = re.search(r'[GET|POST|PUT] (\S+) HTTP/[\d\.]+\%s' % non_printable_char, content, re.DOTALL)
+                if m:
+                    data_request[packet]['http_uri_level1'] = m.group(1).lower().split('/')[1].split('?')[0]
             #######
 
         # Packet request (others)
@@ -379,29 +395,48 @@ def process(text):
                             extra['mysql']['select'][mysql_command_select]['max'] = duration
             #######
 
-            # EXTRA : WWW
-            if service == 'www':
+            # EXTRA : http
+            if service == 'http':
                 m = re.search(r'HTTP\/1\.[012] ([\w\d\s]+)', content)
                 if m:
                     status_code = m.group(1)
                     data['response']['status_code'] = status_code
-                    if 'www_host' in data['request']:
-                        host = data['request']['www_host']
-                        if not 'www' in extra:
-                            extra['www'] = {}
-                        if not host in extra['www']:
-                            extra['www'][host] = {}
-                        if not status_code in extra['www'][host]:
-                            extra['www'][host][status_code] = {}
-                        if not 'count' in extra['www'][host][status_code]:
-                            extra['www'][host][status_code]['count'] = 0
-                            extra['www'][host][status_code]['duration'] = 0
-                            extra['www'][host][status_code]['max'] = 0
-                        extra['www'][host][status_code]['count'] += 1
-                        extra['www'][host][status_code]['duration'] += duration
-                        if extra['www'][host][status_code]['max'] < duration:
-                            extra['www'][host][status_code]['max'] += duration
-
+                    if 'http_host' in data['request']:
+                        host = data['request']['http_host']
+                        if not 'http' in extra:
+                            extra['http'] = {}
+                        if not 'host' in extra['http']:
+                            extra['http']['host'] = {}
+                        if not host in extra['http']['host']:
+                            extra['http']['host'][host] = {}
+                        if not status_code in extra['http']['host'][host]:
+                            extra['http']['host'][host][status_code] = {}
+                        if not 'count' in extra['http']['host'][host][status_code]:
+                            extra['http']['host'][host][status_code]['count'] = 0
+                            extra['http']['host'][host][status_code]['duration'] = 0
+                            extra['http']['host'][host][status_code]['max'] = 0
+                        extra['http']['host'][host][status_code]['count'] += 1
+                        extra['http']['host'][host][status_code]['duration'] += duration
+                        if extra['http']['host'][host][status_code]['max'] < duration:
+                            extra['http']['host'][host][status_code]['max'] = duration
+                    if 'http_uri_level1' in data['request'] and 'http_host' in data['request']:
+                        host_uri_level1 = '%s/%s' % (data['request']['http_host'], data['request']['http_uri_level1'])
+                        if not 'http' in extra:
+                            extra['http'] = {}
+                        if not 'uri_level1' in extra['http']:
+                            extra['http']['uri_level1'] = {}
+                        if not host_uri_level1 in extra['http']['uri_level1']:
+                            extra['http']['uri_level1'][host_uri_level1] = {}
+                        if not status_code in extra['http']['uri_level1'][host_uri_level1]:
+                            extra['http']['uri_level1'][host_uri_level1][status_code] = {}
+                        if not 'count' in extra['http']['uri_level1'][host_uri_level1][status_code]:
+                            extra['http']['uri_level1'][host_uri_level1][status_code]['count'] = 0
+                            extra['http']['uri_level1'][host_uri_level1][status_code]['duration'] = 0
+                            extra['http']['uri_level1'][host_uri_level1][status_code]['max'] = 0
+                        extra['http']['uri_level1'][host_uri_level1][status_code]['count'] += 1
+                        extra['http']['uri_level1'][host_uri_level1][status_code]['duration'] += duration
+                        if extra['http']['uri_level1'][host_uri_level1][status_code]['max'] < duration:
+                            extra['http']['uri_level1'][host_uri_level1][status_code]['max'] = duration
             #######
 
             # Matching duration filter
@@ -596,10 +631,10 @@ if __name__ == '__main__':
 
     # Services not in /etc/services (syntax: 'U|T': 'service_name' where U=UDP and T=TCP)
     services_custom = {
-        'T81': 'www',
+        'T81': 'http',
         'T3307': 'mysql',
-        'T8080': 'www',
-        'T8081': 'www',
+        'T8080': 'http',
+        'T8081': 'http',
         'T61613': 'activemq',
         'T61616': 'activemq'
     }
