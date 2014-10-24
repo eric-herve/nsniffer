@@ -141,58 +141,57 @@ def display_stats():
         for protocol in stat:
             for service in stat[protocol]:
                 average = stat[protocol][service]['duration'] / stat[protocol][service]['counter']
-                print "%12s (%s) : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
-                    % (service, protocol, stat[protocol][service]['counter'],
+                print "%5s-> %-15s (%s) : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
+                    % (' ', service, protocol, stat[protocol][service]['counter'],
                        stat[protocol][service]['duration'], average, stat[protocol][service]['max'])
 
     if extra:
         print
         print "- Extra stats by service :"
         for service in extra:
-            if service == 'http':
-                print "%7s %s by host :" % ('', service)
-                for host in sorted(extra[service]['host']):
-                    print "%15sHost '%s' :" % (' ', host)
-                    for status_code in sorted(extra[service]['host'][host]):
-                        average = extra[service]['host'][host][status_code]['duration'] / \
-                            extra[service]['host'][host][status_code]['count']
-                        print "%20s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
-                            % (' ', status_code, extra[service]['host'][host][status_code]['count'],
-                               extra[service]['host'][host][status_code]['duration'], average,
-                               extra[service]['host'][host][status_code]['max'])
-                print "%7s %s by host and uri level1 :" % ('', service)
-                for host in sorted(extra[service]['uri_level1']):
-                    print "%15sHost '%s' :" % (' ', host)
-                    for status_code in sorted(extra[service]['uri_level1'][host]):
-                        average = extra[service]['uri_level1'][host][status_code]['duration'] / \
-                            extra[service]['uri_level1'][host][status_code]['count']
-                        print "%20s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
-                            % (' ', status_code, extra[service]['uri_level1'][host][status_code]['count'],
-                               extra[service]['uri_level1'][host][status_code]['duration'], average,
-                               extra[service]['uri_level1'][host][status_code]['max'])
+            m = re.match('^http$|^http_', service)
+            if m:
+                print "%5s-> %s" % ('', service)
+                for http_matched in sorted(extra[service]):
+                    print "%10s-> by %s" % ('', http_matched)
+                    for host in sorted(extra[service][http_matched]):
+                        print "%15s-> Host '%s'" % (' ', host)
+                        for status_code in sorted(extra[service][http_matched][host]):
+                            caching_str = ''
+                            average = extra[service][http_matched][host][status_code]['duration'] / \
+                                extra[service][http_matched][host][status_code]['count']
+                            if 'http_varnish_caching' in extra[service][http_matched][host][status_code]:
+                                caching = extra[service][http_matched][host][status_code]['http_varnish_caching']
+                                caching_str = '(caching=[MISS:%s, HIT:%s, NOCACHE:%s])' % (caching['MISS'],
+                                                                                           caching['HIT'],
+                                                                                           caching['NOCACHE'])
+                            print "%20s-> %3s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs) %s" \
+                                % (' ', status_code, extra[service][http_matched][host][status_code]['count'],
+                                   extra[service][http_matched][host][status_code]['duration'], average,
+                                   extra[service][http_matched][host][status_code]['max'], caching_str)
             elif service == 'mysql':
-                print "%7s %s :" % ('', service)
+                print "%5s-> %s" % ('', service)
                 if 'command' in extra[service]:
-                    print "%15sCommands :" % ' '
+                    print "%10s-> Commands" % ' '
                     for command in sorted(extra[service]['command']):
                         average = extra[service]['command'][command]['duration'] / \
                             extra[service]['command'][command]['count']
-                        print "%20s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
+                        print "%15s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
                             % (' ', command, extra[service]['command'][command]['count'],
                                extra[service]['command'][command]['duration'], average,
                                extra[service]['command'][command]['max'])
                 if 'select' in extra[service]:
-                    print "%15sCommand 'SELECT' details (database.table) :" % ' '
+                    print "%10s-> Command 'SELECT' details (database.table)" % ' '
                     for select in sorted(extra[service]['select']):
                         average = extra[service]['select'][select]['duration'] / \
                             extra[service]['select'][select]['count']
                         if len(select) <= 30:
-                            print "%20s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
+                            print "%15s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
                                 % (' ', select, extra[service]['select'][select]['count'],
                                    extra[service]['select'][select]['duration'], average,
                                    extra[service]['select'][select]['max'])
                         else:
-                            print "%20s-> %-30s :\n%55s %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
+                            print "%15s-> %-30s :\n%55s %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
                                 % (' ', select, ' ', extra[service]['select'][select]['count'],
                                    extra[service]['select'][select]['duration'], average,
                                    extra[service]['select'][select]['max'])
@@ -207,9 +206,9 @@ def display_stats():
         for protocol in stat_matched:
             for service in stat_matched[protocol]:
                 average = stat_matched[protocol][service]['duration'] / stat_matched[protocol][service]['counter']
-            print "%12s (%s) : %6s request(s) in %0.5fs (average: %0.5fs, max %0.5fs)" \
-                % (service, protocol, stat_matched[protocol][service]['counter'],
-                   stat_matched[protocol][service]['duration'], average, stat_matched[protocol][service]['max'])
+                print "%5s-> %-15s (%s) : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
+                    % (' ', service, protocol, stat_matched[protocol][service]['counter'],
+                       stat_matched[protocol][service]['duration'], average, stat_matched[protocol][service]['max'])
     print
 
 
@@ -291,7 +290,12 @@ def process(text):
                 return
 
         # Packet request (first)
-        if packet_type == 'request' and not packet in data_request:
+        if packet_type == 'request':
+
+            # It may ngrep timestamp packets too slowly and that the same
+            # dynamic port being used twice at the same time (for ngrep only)
+            if packet in data_request:
+                packet = packet + '_BIS'
 
             data_request[packet] = {}
             data_request[packet]['timestamp'] = timet
@@ -319,21 +323,27 @@ def process(text):
             #######
 
             # EXTRA : http
-            if service == 'http':
-                m = re.search(r'Host: ([\w._-]*)\%s' % non_printable_char, content, re.DOTALL)
+            m = re.match('^http$|^http_', service)
+            if m:
+                m = re.search(r'Host: ([\d\w\:._-]*)\%s' % non_printable_char, content, re.DOTALL)
                 if m:
                     data_request[packet]['http_host'] = m.group(1).lower()
                 m = re.search(r'[GET|POST|PUT] (\S+) HTTP/[\d\.]+\%s' % non_printable_char, content, re.DOTALL)
-                if m:
-                    data_request[packet]['http_uri_level1'] = m.group(1).lower().split('/')[1].split('?')[0]
+                if m and 'http_host' in data_request[packet]:
+                    uri_level1 = m.group(1).lower().split('/')[1].split('?')[0]
+                    data_request[packet]['http_uri_level1'] = '%s/%s' % (data_request[packet]['http_host'], uri_level1)
             #######
 
         # Packet request (others)
-        elif packet_type == 'request' and packet in data_request:
+        elif packet_type == 'request' and (packet in data_request or packet + '_BIS' in data_request):
+            if packet + '_BIS' in data_request:
+                packet = packet + '_BIS'
             data_request[packet]['content'] = "%s%s" % (data_request[packet]['content'], content)
             data_request[packet]['count'] = data_request[packet]['count'] + 1
         # Packet response
-        elif packet_type == 'response' and packet_reverse in data_request:
+        elif packet_type == 'response' and (packet_reverse in data_request or packet_reverse + '_BIS' in data_request):
+            if packet_reverse + '_BIS' in data_request:
+                packet_reverse = packet_reverse + '_BIS'
             duration = timet - data_request[packet_reverse]['timestamp']
             if not protocol in stat:
                 stat[protocol] = {}
@@ -396,47 +406,51 @@ def process(text):
             #######
 
             # EXTRA : http
-            if service == 'http':
-                m = re.search(r'HTTP\/1\.[012] ([\w\d\s]+)', content)
+            m = re.match('^http$|^http_', service)
+            if m:
+                m = re.search(r'X-Varnish: \d+\%s' % non_printable_char, content, re.DOTALL)
+                if m:
+                    data['response']['http_varnish_caching'] = 'MISS'
+                else:
+                    m = re.search(r'X-Varnish: \d+ \d+\%s' % non_printable_char, content, re.DOTALL)
+                    if m:
+                        data['response']['http_varnish_caching'] = 'HIT'
+                    else:
+                        data['response']['http_varnish_caching'] = 'NOCACHE'
+                m = re.search(r'HTTP/[\d\.]+ (\d+) ', content)
                 if m:
                     status_code = m.group(1)
                     data['response']['status_code'] = status_code
-                    if 'http_host' in data['request']:
-                        host = data['request']['http_host']
-                        if not 'http' in extra:
-                            extra['http'] = {}
-                        if not 'host' in extra['http']:
-                            extra['http']['host'] = {}
-                        if not host in extra['http']['host']:
-                            extra['http']['host'][host] = {}
-                        if not status_code in extra['http']['host'][host]:
-                            extra['http']['host'][host][status_code] = {}
-                        if not 'count' in extra['http']['host'][host][status_code]:
-                            extra['http']['host'][host][status_code]['count'] = 0
-                            extra['http']['host'][host][status_code]['duration'] = 0
-                            extra['http']['host'][host][status_code]['max'] = 0
-                        extra['http']['host'][host][status_code]['count'] += 1
-                        extra['http']['host'][host][status_code]['duration'] += duration
-                        if extra['http']['host'][host][status_code]['max'] < duration:
-                            extra['http']['host'][host][status_code]['max'] = duration
-                    if 'http_uri_level1' in data['request'] and 'http_host' in data['request']:
-                        host_uri_level1 = '%s/%s' % (data['request']['http_host'], data['request']['http_uri_level1'])
-                        if not 'http' in extra:
-                            extra['http'] = {}
-                        if not 'uri_level1' in extra['http']:
-                            extra['http']['uri_level1'] = {}
-                        if not host_uri_level1 in extra['http']['uri_level1']:
-                            extra['http']['uri_level1'][host_uri_level1] = {}
-                        if not status_code in extra['http']['uri_level1'][host_uri_level1]:
-                            extra['http']['uri_level1'][host_uri_level1][status_code] = {}
-                        if not 'count' in extra['http']['uri_level1'][host_uri_level1][status_code]:
-                            extra['http']['uri_level1'][host_uri_level1][status_code]['count'] = 0
-                            extra['http']['uri_level1'][host_uri_level1][status_code]['duration'] = 0
-                            extra['http']['uri_level1'][host_uri_level1][status_code]['max'] = 0
-                        extra['http']['uri_level1'][host_uri_level1][status_code]['count'] += 1
-                        extra['http']['uri_level1'][host_uri_level1][status_code]['duration'] += duration
-                        if extra['http']['uri_level1'][host_uri_level1][status_code]['max'] < duration:
-                            extra['http']['uri_level1'][host_uri_level1][status_code]['max'] = duration
+                    for http_matched in ['http_host', 'http_uri_level1']:
+                        if http_matched in data['request']:
+                            host = data['request'][http_matched]
+                            if not service in extra:
+                                extra[service] = {}
+                            if not http_matched in extra[service]:
+                                extra[service][http_matched] = {}
+                            if not host in extra[service][http_matched]:
+                                extra[service][http_matched][host] = {}
+                            if not status_code in extra[service][http_matched][host]:
+                                extra[service][http_matched][host][status_code] = {}
+                            if not 'count' in extra[service][http_matched][host][status_code]:
+                                extra[service][http_matched][host][status_code]['count'] = 0
+                                extra[service][http_matched][host][status_code]['duration'] = 0
+                                extra[service][http_matched][host][status_code]['max'] = 0
+                            extra[service][http_matched][host][status_code]['count'] += 1
+                            extra[service][http_matched][host][status_code]['duration'] += duration
+                            if extra[service][http_matched][host][status_code]['max'] < duration:
+                                extra[service][http_matched][host][status_code]['max'] = duration
+                            if not 'http_varnish_caching' in extra[service][http_matched][host][status_code]:
+                                extra[service][http_matched][host][status_code]['http_varnish_caching'] = {}
+                                extra[service][http_matched][host][status_code]['http_varnish_caching']['MISS'] = 0
+                                extra[service][http_matched][host][status_code]['http_varnish_caching']['HIT'] = 0
+                                extra[service][http_matched][host][status_code]['http_varnish_caching']['NOCACHE'] = 0
+                            if data['response']['http_varnish_caching'] == 'MISS':
+                                extra[service][http_matched][host][status_code]['http_varnish_caching']['MISS'] += 1
+                            if data['response']['http_varnish_caching'] == 'HIT':
+                                extra[service][http_matched][host][status_code]['http_varnish_caching']['HIT'] += 1
+                            if data['response']['http_varnish_caching'] == 'NOCACHE':
+                                extra[service][http_matched][host][status_code]['http_varnish_caching']['NOCACHE'] += 1
             #######
 
             # Matching duration filter
@@ -630,9 +644,11 @@ if __name__ == '__main__':
     ignore_case_match = False
 
     # Services not in /etc/services (syntax: 'U|T': 'service_name' where U=UDP and T=TCP)
+    # Services http and http_* will be process differently in the statistics
     services_custom = {
         'T81': 'http',
         'T3307': 'mysql',
+        'T6081': 'http_varnish',
         'T8080': 'http',
         'T8081': 'http',
         'T61613': 'activemq',
@@ -791,7 +807,7 @@ if __name__ == '__main__':
             # Cleaning line return
             line = line.rstrip()
             # Pass empty line
-            if line == "":
+            if re.search(r'^(\s*|%s)$' % non_printable_char, line):
                 break
             # Pass information line of ngrep
             if re.search(r'^(interface|filter|match):\s*.*', line):
