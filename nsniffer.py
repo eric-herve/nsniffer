@@ -51,6 +51,9 @@ optional arguments:
   --no-response-content              Don't display the request content (disabled in batch view).
   -I, --input-pcap=FILE              Input file  pcap_dump into ngrep.
   -O, --output-pcap=FILE             Output packets to a pcap-compatible dump file.
+  -X, --extra                        Display extra statistics for all and matched requests.
+  --extra-all                        Display extra statistics for all requests.
+  --extra-match                      Display extra statistics for matched requests.
   -h, --help                         Display this help and exit.
 """
 
@@ -117,7 +120,7 @@ def display_stats():
     if 'request' in content_size:
         if content_size['response']:
             print "Request content size        : %s" % content_size['request']
-    if no_display_response_content:
+    if not display_response_content:
         print "No response content display : True"
     else:
         if 'response' in content_size:
@@ -125,82 +128,40 @@ def display_stats():
                 print "Response content size       : %s" % content_size['response']
     print "#" * 56
 
-    if stat or stat_matched or extra:
+    if stat_all or stat_matched or extra_stat_all or extra_stat_matched:
         print
         print "#" * 10
         print "STATISTICS"
         print "#" * 10
 
-    if stat:
+    if stat_all or extra_stat_all:
         print
         print "-" * 12
         print "ALL requests"
         print "-" * 12
+
+    if stat_all:
         print
         print "- Number of requests and response time :"
-        for protocol in stat:
-            for service in stat[protocol]:
-                average = stat[protocol][service]['duration'] / stat[protocol][service]['counter']
+        for protocol in stat_all:
+            for service in stat_all[protocol]:
+                average = stat_all[protocol][service]['duration'] / stat_all[protocol][service]['counter']
                 print "%5s-> %-15s (%s) : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
-                    % (' ', service, protocol, stat[protocol][service]['counter'],
-                       stat[protocol][service]['duration'], average, stat[protocol][service]['max'])
+                    % (' ', service, protocol, stat_all[protocol][service]['counter'],
+                       stat_all[protocol][service]['duration'], average, stat_all[protocol][service]['max'])
 
-    if extra:
+    if extra_stat_all and display_extra_stat_all:
         print
         print "- Extra stats by service :"
-        for service in extra:
-            m = re.match('^http$|^http_', service)
-            if m:
-                print "%5s-> %s" % ('', service)
-                for http_matched in sorted(extra[service]):
-                    print "%10s-> by %s" % ('', http_matched)
-                    for host in sorted(extra[service][http_matched]):
-                        print "%15s-> Host '%s'" % (' ', host)
-                        for status_code in sorted(extra[service][http_matched][host]):
-                            caching_str = ''
-                            average = extra[service][http_matched][host][status_code]['duration'] / \
-                                extra[service][http_matched][host][status_code]['count']
-                            if 'http_varnish_caching' in extra[service][http_matched][host][status_code]:
-                                caching = extra[service][http_matched][host][status_code]['http_varnish_caching']
-                                caching_str = '(caching=[MISS:%s, HIT:%s, NOCACHE:%s])' % (caching['MISS'],
-                                                                                           caching['HIT'],
-                                                                                           caching['NOCACHE'])
-                            print "%20s-> %3s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs) %s" \
-                                % (' ', status_code, extra[service][http_matched][host][status_code]['count'],
-                                   extra[service][http_matched][host][status_code]['duration'], average,
-                                   extra[service][http_matched][host][status_code]['max'], caching_str)
-            elif service == 'mysql':
-                print "%5s-> %s" % ('', service)
-                if 'command' in extra[service]:
-                    print "%10s-> Commands" % ' '
-                    for command in sorted(extra[service]['command']):
-                        average = extra[service]['command'][command]['duration'] / \
-                            extra[service]['command'][command]['count']
-                        print "%15s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
-                            % (' ', command, extra[service]['command'][command]['count'],
-                               extra[service]['command'][command]['duration'], average,
-                               extra[service]['command'][command]['max'])
-                if 'select' in extra[service]:
-                    print "%10s-> Command 'SELECT' details (database.table)" % ' '
-                    for select in sorted(extra[service]['select']):
-                        average = extra[service]['select'][select]['duration'] / \
-                            extra[service]['select'][select]['count']
-                        if len(select) <= 30:
-                            print "%15s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
-                                % (' ', select, extra[service]['select'][select]['count'],
-                                   extra[service]['select'][select]['duration'], average,
-                                   extra[service]['select'][select]['max'])
-                        else:
-                            print "%15s-> %-30s :\n%55s %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
-                                % (' ', select, ' ', extra[service]['select'][select]['count'],
-                                   extra[service]['select'][select]['duration'], average,
-                                   extra[service]['select'][select]['max'])
+        extra_stat_display(extra_stat_all)
 
-    if stat_matched and filter_match:
+    if (stat_matched or extra_stat_matched) and filter_match:
         print
         print "-" * 16
         print "MATCHED requests"
         print "-" * 16
+
+    if stat_matched and filter_match:
         print
         print "- Number of requests and response time :"
         for protocol in stat_matched:
@@ -209,7 +170,62 @@ def display_stats():
                 print "%5s-> %-15s (%s) : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
                     % (' ', service, protocol, stat_matched[protocol][service]['counter'],
                        stat_matched[protocol][service]['duration'], average, stat_matched[protocol][service]['max'])
+
+    if extra_stat_matched and display_extra_stat_matched:
+        print
+        print "- Extra stats by service :"
+        extra_stat_display(extra_stat_matched)
     print
+
+
+def extra_stat_display(extra_stat):
+    for service in extra_stat:
+        m = re.match('^http$|^http_', service)
+        if m:
+            print "%5s-> %s" % ('', service)
+            for http_matched in sorted(extra_stat[service]):
+                print "%10s-> by %s" % ('', http_matched)
+                for host in sorted(extra_stat[service][http_matched]):
+                    print "%15s-> Host '%s'" % (' ', host)
+                    for status_code in sorted(extra_stat[service][http_matched][host]):
+                        caching_str = ''
+                        average = extra_stat[service][http_matched][host][status_code]['duration'] / \
+                            extra_stat[service][http_matched][host][status_code]['count']
+                        if 'http_varnish_caching' in extra_stat[service][http_matched][host][status_code]:
+                            caching = extra_stat[service][http_matched][host][status_code]['http_varnish_caching']
+                            caching_str = '(caching=[MISS:%s, HIT:%s, NOCACHE:%s])' % (caching['MISS'],
+                                                                                       caching['HIT'],
+                                                                                       caching['NOCACHE'])
+                        print "%20s-> %3s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs) %s" \
+                            % (' ', status_code, extra_stat[service][http_matched][host][status_code]['count'],
+                               extra_stat[service][http_matched][host][status_code]['duration'], average,
+                               extra_stat[service][http_matched][host][status_code]['max'], caching_str)
+        elif service == 'mysql':
+            print "%5s-> %s" % ('', service)
+            if 'command' in extra_stat[service]:
+                print "%10s-> Commands" % ' '
+                for command in sorted(extra_stat[service]['command']):
+                    average = extra_stat[service]['command'][command]['duration'] / \
+                        extra_stat[service]['command'][command]['count']
+                    print "%15s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
+                        % (' ', command, extra_stat[service]['command'][command]['count'],
+                           extra_stat[service]['command'][command]['duration'], average,
+                           extra_stat[service]['command'][command]['max'])
+            if 'select' in extra_stat[service]:
+                print "%10s-> Command 'SELECT' details (database.table)" % ' '
+                for select in sorted(extra_stat[service]['select']):
+                    average = extra_stat[service]['select'][select]['duration'] / \
+                        extra_stat[service]['select'][select]['count']
+                    if len(select) <= 30:
+                        print "%15s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
+                            % (' ', select, extra_stat[service]['select'][select]['count'],
+                               extra_stat[service]['select'][select]['duration'], average,
+                               extra_stat[service]['select'][select]['max'])
+                    else:
+                        print "%15s-> %-30s :\n%55s %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
+                            % (' ', select, ' ', extra_stat[service]['select'][select]['count'],
+                               extra_stat[service]['select'][select]['duration'], average,
+                               extra_stat[service]['select'][select]['max'])
 
 
 def signal_end(signum, frame):
@@ -217,19 +233,106 @@ def signal_end(signum, frame):
 
     # Processing last text block if exists
     if text_block:
-        process(text_block)
+        process()
 
     # Display
     display_stats()
     sys.exit(0)
 
 
-def process(text):
+def process():
     """Consolidate packets data."""
+
+    def mysql_extra_process(extra_stat):
+        if 'mysql_command' in data['request']:
+            mysql_command = data['request']['mysql_command']
+            mysql_command_select = None
+            if mysql_command == 'SELECT':
+                database = 'unknown'
+                table = 'unknown'
+                m = re.match(r'^[\S\n]{9,10}def%s?(\w+)%s(\w+)[\S\n]' % (non_printable_char,
+                                                                         non_printable_char), content.strip())
+                if m:
+                    database = m.group(1)
+                    table = m.group(2)
+                    mysql_command_select = '%s.%s' % (database, table)
+            if not 'mysql' in extra_stat:
+                extra_stat['mysql'] = {}
+            if not 'command' in extra_stat['mysql']:
+                extra_stat['mysql']['command'] = {}
+            if not mysql_command in extra_stat['mysql']['command']:
+                extra_stat['mysql']['command'][mysql_command] = {}
+            if not 'count' in extra_stat['mysql']['command'][mysql_command]:
+                extra_stat['mysql']['command'][mysql_command]['count'] = 0
+                extra_stat['mysql']['command'][mysql_command]['duration'] = 0
+                extra_stat['mysql']['command'][mysql_command]['max'] = 0
+            extra_stat['mysql']['command'][mysql_command]['count'] += 1
+            extra_stat['mysql']['command'][mysql_command]['duration'] += duration
+            if extra_stat['mysql']['command'][mysql_command]['max'] < duration:
+                extra_stat['mysql']['command'][mysql_command]['max'] = duration
+            if mysql_command_select:
+                if not 'select' in extra_stat['mysql']:
+                    extra_stat['mysql']['select'] = {}
+                if not mysql_command_select in extra_stat['mysql']['select']:
+                    extra_stat['mysql']['select'][mysql_command_select] = {}
+                if not 'count' in extra_stat['mysql']['select'][mysql_command_select]:
+                    extra_stat['mysql']['select'][mysql_command_select]['count'] = 0
+                    extra_stat['mysql']['select'][mysql_command_select]['duration'] = 0
+                    extra_stat['mysql']['select'][mysql_command_select]['max'] = 0
+                extra_stat['mysql']['select'][mysql_command_select]['count'] += 1
+                extra_stat['mysql']['select'][mysql_command_select]['duration'] += duration
+                if extra_stat['mysql']['select'][mysql_command_select]['max'] < duration:
+                    extra_stat['mysql']['select'][mysql_command_select]['max'] = duration
+
+    def http_extra_process(extra_stat):
+        m = re.search(r'X-Varnish: \d+\%s' % non_printable_char, content, re.DOTALL)
+        if m:
+            data['response']['http_varnish_caching'] = 'MISS'
+        else:
+            m = re.search(r'X-Varnish: \d+ \d+\%s' % non_printable_char, content, re.DOTALL)
+            if m:
+                data['response']['http_varnish_caching'] = 'HIT'
+            else:
+                data['response']['http_varnish_caching'] = 'NOCACHE'
+        m = re.search(r'HTTP/[\d\.]+ (\d+) ', content)
+        if m:
+            status_code = m.group(1)
+            data['response']['status_code'] = status_code
+            for http_matched in ['http_host', 'http_uri_level1']:
+                if http_matched in data['request']:
+                    host = data['request'][http_matched]
+                    if not service in extra_stat:
+                        extra_stat[service] = {}
+                    if not http_matched in extra_stat[service]:
+                        extra_stat[service][http_matched] = {}
+                    if not host in extra_stat[service][http_matched]:
+                        extra_stat[service][http_matched][host] = {}
+                    if not status_code in extra_stat[service][http_matched][host]:
+                        extra_stat[service][http_matched][host][status_code] = {}
+                    if not 'count' in extra_stat[service][http_matched][host][status_code]:
+                        extra_stat[service][http_matched][host][status_code]['count'] = 0
+                        extra_stat[service][http_matched][host][status_code]['duration'] = 0
+                        extra_stat[service][http_matched][host][status_code]['max'] = 0
+                    extra_stat[service][http_matched][host][status_code]['count'] += 1
+                    extra_stat[service][http_matched][host][status_code]['duration'] += duration
+                    if extra_stat[service][http_matched][host][status_code]['max'] < duration:
+                        extra_stat[service][http_matched][host][status_code]['max'] = duration
+                    if not 'http_varnish_caching' in extra_stat[service][http_matched][host][status_code]:
+                        extra_stat[service][http_matched][host][status_code]['http_varnish_caching'] = {}
+                        extra_stat[service][http_matched][host][status_code]['http_varnish_caching']['MISS'] = 0
+                        extra_stat[service][http_matched][host][status_code]['http_varnish_caching']['HIT'] = 0
+                        extra_stat[service][http_matched][host][status_code]['http_varnish_caching']['NOCACHE'] = 0
+                    if data['response']['http_varnish_caching'] == 'MISS':
+                        extra_stat[service][http_matched][host][status_code]['http_varnish_caching']['MISS'] += 1
+                    if data['response']['http_varnish_caching'] == 'HIT':
+                        extra_stat[service][http_matched][host][status_code]['http_varnish_caching']['HIT'] += 1
+                    if data['response']['http_varnish_caching'] == 'NOCACHE':
+                        extra_stat[service][http_matched][host][status_code]['http_varnish_caching']['NOCACHE'] += 1
+
     global translate_ip
 
     regex = r"^([TU]) ([\d]{4}\/[\d]{2}\/[\d]{2} [\d]{2}:[\d]{2}:[\d]{2}.[\d]{6}) ([\d.:]+:[\d]+) -> ([\d.:]+:[\d]+)(?: \[([\w]+)\])?(.*)"
-    m = re.search(regex, text, flags=re.DOTALL)
+    m = re.search(regex, text_block, flags=re.DOTALL)
     if m:
         duration_color = ""
         protocol = m.group(1)
@@ -304,7 +407,7 @@ def process(text):
             data_request[packet]['content'] = content
             data_request[packet]['count'] = 1
 
-            # FEATURE AND EXTRA : MYSQL
+            # feature : mysql
             if service == 'mysql':
                 m = re.search(r'^\S{5}([\w]{3,})', content.strip())
                 if not m:
@@ -313,7 +416,7 @@ def process(text):
                     if n:
                         data_request[packet]['mysql_command'] = 'CONNECT WITH %s' % n.group(1)
                     else:
-                        #print "#DEBUG# REQUEST MYSQL NOT RECOGNIZED : %s" % content
+                        #print "#DEBUG# MYSQL REQUEST NOT RECOGNIZED : %s" % content
                         return
                 else:
                     mysql_command = m.group(1)
@@ -322,7 +425,7 @@ def process(text):
                         data_request[packet]['mysql_command'] = m.group(1).upper()
             #######
 
-            # EXTRA : http
+            # feature : http
             m = re.match('^http$|^http_', service)
             if m:
                 m = re.search(r'Host: ([\d\w\:._-]*)\%s' % non_printable_char, content, re.DOTALL)
@@ -345,113 +448,35 @@ def process(text):
             if packet_reverse + '_BIS' in data_request:
                 packet_reverse = packet_reverse + '_BIS'
             duration = timet - data_request[packet_reverse]['timestamp']
-            if not protocol in stat:
-                stat[protocol] = {}
-            if not service in stat[protocol]:
-                stat[protocol][service] = {}
-            if not 'duration' in stat[protocol][service]:
-                stat[protocol][service]['duration'] = 0
-                stat[protocol][service]['counter'] = 0
-                stat[protocol][service]['max'] = 0
-            stat[protocol][service]['duration'] += duration
-            stat[protocol][service]['counter'] += 1
-            if stat[protocol][service]['max'] < duration:
-                stat[protocol][service]['max'] = duration
+            if not protocol in stat_all:
+                stat_all[protocol] = {}
+            if not service in stat_all[protocol]:
+                stat_all[protocol][service] = {}
+            if not 'duration' in stat_all[protocol][service]:
+                stat_all[protocol][service]['duration'] = 0
+                stat_all[protocol][service]['counter'] = 0
+                stat_all[protocol][service]['max'] = 0
+            stat_all[protocol][service]['duration'] += duration
+            stat_all[protocol][service]['counter'] += 1
+            if stat_all[protocol][service]['max'] < duration:
+                stat_all[protocol][service]['max'] = duration
             data = {}
             data['request'] = data_request[packet_reverse]
             del data_request[packet_reverse]
             data['response'] = {}
 
-            # EXTRA : MYSQL
-            if service == 'mysql':
-                if 'mysql_command' in data['request']:
-                    mysql_command = data['request']['mysql_command']
-                    mysql_command_select = None
-                    if mysql_command == 'SELECT':
-                        database = 'unknown'
-                        table = 'unknown'
-                        m = re.match(r'^[\S\n]{9,10}def%s?(\w+)%s(\w+)[\S\n]' % (non_printable_char,
-                                                                                 non_printable_char), content.strip())
-                        if m:
-                            database = m.group(1)
-                            table = m.group(2)
-                            mysql_command_select = '%s.%s' % (database, table)
-                    if not 'mysql' in extra:
-                        extra['mysql'] = {}
-                    if not 'command' in extra['mysql']:
-                        extra['mysql']['command'] = {}
-                    if not mysql_command in extra['mysql']['command']:
-                        extra['mysql']['command'][mysql_command] = {}
-                    if not 'count' in extra['mysql']['command'][mysql_command]:
-                        extra['mysql']['command'][mysql_command]['count'] = 0
-                        extra['mysql']['command'][mysql_command]['duration'] = 0
-                        extra['mysql']['command'][mysql_command]['max'] = 0
-                    extra['mysql']['command'][mysql_command]['count'] += 1
-                    extra['mysql']['command'][mysql_command]['duration'] += duration
-                    if extra['mysql']['command'][mysql_command]['max'] < duration:
-                        extra['mysql']['command'][mysql_command]['max'] = duration
-                    if mysql_command_select:
-                        if not 'select' in extra['mysql']:
-                            extra['mysql']['select'] = {}
-                        if not mysql_command_select in extra['mysql']['select']:
-                            extra['mysql']['select'][mysql_command_select] = {}
-                        if not 'count' in extra['mysql']['select'][mysql_command_select]:
-                            extra['mysql']['select'][mysql_command_select]['count'] = 0
-                            extra['mysql']['select'][mysql_command_select]['duration'] = 0
-                            extra['mysql']['select'][mysql_command_select]['max'] = 0
-                        extra['mysql']['select'][mysql_command_select]['count'] += 1
-                        extra['mysql']['select'][mysql_command_select]['duration'] += duration
-                        if extra['mysql']['select'][mysql_command_select]['max'] < duration:
-                            extra['mysql']['select'][mysql_command_select]['max'] = duration
-            #######
+            if display_extra_stat_all:
 
-            # EXTRA : http
-            m = re.match('^http$|^http_', service)
-            if m:
-                m = re.search(r'X-Varnish: \d+\%s' % non_printable_char, content, re.DOTALL)
+                # extra : mysql
+                if service == 'mysql':
+                    mysql_extra_process(extra_stat_all)
+                #######
+
+                # extra : http
+                m = re.match('^http$|^http_', service)
                 if m:
-                    data['response']['http_varnish_caching'] = 'MISS'
-                else:
-                    m = re.search(r'X-Varnish: \d+ \d+\%s' % non_printable_char, content, re.DOTALL)
-                    if m:
-                        data['response']['http_varnish_caching'] = 'HIT'
-                    else:
-                        data['response']['http_varnish_caching'] = 'NOCACHE'
-                m = re.search(r'HTTP/[\d\.]+ (\d+) ', content)
-                if m:
-                    status_code = m.group(1)
-                    data['response']['status_code'] = status_code
-                    for http_matched in ['http_host', 'http_uri_level1']:
-                        if http_matched in data['request']:
-                            host = data['request'][http_matched]
-                            if not service in extra:
-                                extra[service] = {}
-                            if not http_matched in extra[service]:
-                                extra[service][http_matched] = {}
-                            if not host in extra[service][http_matched]:
-                                extra[service][http_matched][host] = {}
-                            if not status_code in extra[service][http_matched][host]:
-                                extra[service][http_matched][host][status_code] = {}
-                            if not 'count' in extra[service][http_matched][host][status_code]:
-                                extra[service][http_matched][host][status_code]['count'] = 0
-                                extra[service][http_matched][host][status_code]['duration'] = 0
-                                extra[service][http_matched][host][status_code]['max'] = 0
-                            extra[service][http_matched][host][status_code]['count'] += 1
-                            extra[service][http_matched][host][status_code]['duration'] += duration
-                            if extra[service][http_matched][host][status_code]['max'] < duration:
-                                extra[service][http_matched][host][status_code]['max'] = duration
-                            if not 'http_varnish_caching' in extra[service][http_matched][host][status_code]:
-                                extra[service][http_matched][host][status_code]['http_varnish_caching'] = {}
-                                extra[service][http_matched][host][status_code]['http_varnish_caching']['MISS'] = 0
-                                extra[service][http_matched][host][status_code]['http_varnish_caching']['HIT'] = 0
-                                extra[service][http_matched][host][status_code]['http_varnish_caching']['NOCACHE'] = 0
-                            if data['response']['http_varnish_caching'] == 'MISS':
-                                extra[service][http_matched][host][status_code]['http_varnish_caching']['MISS'] += 1
-                            if data['response']['http_varnish_caching'] == 'HIT':
-                                extra[service][http_matched][host][status_code]['http_varnish_caching']['HIT'] += 1
-                            if data['response']['http_varnish_caching'] == 'NOCACHE':
-                                extra[service][http_matched][host][status_code]['http_varnish_caching']['NOCACHE'] += 1
-            #######
+                    http_extra_process(extra_stat_all)
+                #######
 
             # Matching duration filter
             if duration < duration_threshold:
@@ -520,6 +545,19 @@ def process(text):
                 if stat_matched[protocol][service]['max'] < duration:
                     stat_matched[protocol][service]['max'] = duration
 
+                if display_extra_stat_matched:
+
+                    # extra : mysql
+                    if service == 'mysql':
+                        mysql_extra_process(extra_stat_matched)
+                    #######
+
+                    # stat : http
+                    m = re.match('^http$|^http_', service)
+                    if m:
+                        http_extra_process(extra_stat_matched)
+                    #######
+
             # Translate IP if asked
             if translate_ip:
                 try:
@@ -576,7 +614,7 @@ def process(text):
                 print "| %srequest content%s |" % (desc_color1, reset_color)
                 print " " + "-" * 17
                 print data['request']['content']
-                if not no_display_response_content:
+                if display_response_content:
                     print " " + "-" * 18
                     print "| %sresponse content%s |" % (desc_color1, reset_color)
                     print " " + "-" * 18
@@ -601,7 +639,7 @@ def process(text):
                                                      reset_color)
                 print "%srequest%s (%s)" % (desc_color2, reset_color, data['request']['time'])
                 print data['request']['content']
-                if not no_display_response_content:
+                if display_response_content:
                     print "%sresponse%s (%s)" % (desc_color2, reset_color, timeh)
                     print data['response']['content']
                 print
@@ -633,7 +671,7 @@ if __name__ == '__main__':
     filter_match = False
     color = False
     translate_ip = False
-    no_display_response_content = False
+    display_response_content = True
     content_size = {}
     content_size['request'] = None
     content_size['response'] = None
@@ -642,6 +680,8 @@ if __name__ == '__main__':
     regex_match['response'] = None
     ngrep_interface = None
     ignore_case_match = False
+    display_extra_stat_all = False
+    display_extra_stat_matched = False
 
     # Services not in /etc/services (syntax: 'U|T': 'service_name' where U=UDP and T=TCP)
     # Services http and http_* will be process differently in the statistics
@@ -664,23 +704,25 @@ if __name__ == '__main__':
     # Initialization of data/timers/counters/caches
     start_time = datetime.now()
     data_request = {}
-    stat = {}
+    stat_all = {}
+    extra_stat_all = {}
     stat_matched = {}
-    extra = {}
+    extra_stat_matched = {}
     dns_cache = {}
     text_block = None
 
     # Read arguments
     argv = sys.argv[1:]
     try:
-        opts, args = getopt.getopt(argv, "hv:D:m:fctlS:iF:ld:I:O:", ["help", "view=", "duration-threshold=",
-                                                                     "regex-match=", "filter-match", "color",
-                                                                     "translate-ip", "by-line", "no-response-content",
-                                                                     "content-size=", "request-content-size=",
-                                                                     "response-content-size=", "ignore-case-match",
-                                                                     "request-regex-match=", "response-regex-match=",
-                                                                     "ngrep-filter=", "device=", "input-pcap-file=",
-                                                                     "output-pcap-file="])
+        opts, args = getopt.getopt(argv, "hv:D:m:fctlS:iF:ld:I:O:X", ["help", "view=", "duration-threshold=",
+                                                                      "regex-match=", "filter-match", "color",
+                                                                      "translate-ip", "by-line", "no-response-content",
+                                                                      "content-size=", "request-content-size=",
+                                                                      "response-content-size=", "ignore-case-match",
+                                                                      "request-regex-match=", "response-regex-match=",
+                                                                      "ngrep-filter=", "device=", "input-pcap-file=",
+                                                                      "output-pcap-file=", "extra", "extra-all",
+                                                                      "extra-match"])
     except getopt.GetoptError as err:
         print "\nerror : %s\n" % err
         sys.exit(2)
@@ -718,7 +760,7 @@ if __name__ == '__main__':
         elif opt in ("-i", "--ignore-case-match"):
             ignore_case_match = True
         elif opt in ("--no-response-content"):
-            no_display_response_content = True
+            display_response_content = False
         elif opt in ("-S", "--content-size"):
             try:
                 content_size['response'] = int(arg)
@@ -748,6 +790,13 @@ if __name__ == '__main__':
                 sys.exit(2)
         elif opt in ("-O", "--output-pcap-file"):
             output_pcap_file = arg
+        elif opt in ("-X", "--extra"):
+            display_extra_stat_all = True
+            display_extra_stat_matched = True
+        elif opt in ("--extra-all"):
+            display_extra_stat_all = True
+        elif opt in ("--extra-matched"):
+            display_extra_stat_matched = True
     if (regex_match['request'] or regex_match['response']) and not (color or filter_match):
         print "\nerror : missing complementary argument for -m (--match)\n"
         sys.exit(2)
@@ -822,4 +871,4 @@ if __name__ == '__main__':
                 signal.alarm(1)
 
         # Processing text block
-        process(text_block)
+        process()

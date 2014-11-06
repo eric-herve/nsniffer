@@ -6,10 +6,11 @@ This python script is a Linux ngrep wrapper.
 
 It essentially allows :
 - to assemble requests and responses
-- to calculate the response time to requests
+- to calculate the response time of requests
 - to match with regex
 - to match with duration threshold
 - to colorize output and matching
+- to display statistics
 
 It is only compatible with IPv4 and TCP/UDP.
 
@@ -17,8 +18,8 @@ It is only compatible with IPv4 and TCP/UDP.
 
 ### Requirement
 
-- ngrep 1.x
-- python 2.7
+- ngrep +1.4
+- python +2.6 (python 3 untested)
 
 ### Services
 
@@ -54,43 +55,30 @@ If necessary, this character can be replaced via the variable 'non_printable_cha
 
 ## Arguments
 
-`-d DEVICE, --device DEVICE` By default ngrep will select a default interface to listen on. Use this option to force ngrep to listen on interface DEVICE ('any' for all).
-
-`-F, --ngrep-filter` ngrep filter (for details, see ngrep manual.
-
-`-v NAME, --view=NAME` Display view ('normal', 'pretty' or 'batch', default: normal).
-
-`-D SEC, --duration-threshold=SEC` Match the requests higher than the threshold (in seconds with dot) (only used with '-f' and/or '-c').
-
-`-m, --regex-match=REGEX` Match with regex in the request or/and the response content (only used with '-f' and/or '-c').
-
-`--request-regex-match=REGEX` Match with regex in the request content (only used with '-f' and/or '-c').
-
-`--response-regex-match=REGEX` Match with regex in the response content (only used with '-f' and/or '-c').
-
-`-i, --ignore-case-match` Ignorcase distinctions in matching.
-
-`-f, --filter-match` Display only the requests that are matched.
-
-`-c, --color` Active colorization.
-
-`-l, --by-line` Display content line by line.
-
-`-t, --translate-ip` If possible, host lookup (warning: if lookup is too slow, it will be automaticaly disabled).
-
-`-S SIZE, --content-size=SIZE` Limit the string size (display only) of content.
-
-`--request-content-size=SIZE` Limit the string size (display only) of request content.
-
-`--response-content-size=SIZE` Limit the string size (display only) of response content.
-
-`--no-response-content` Don't display the request content (disabled in batch view).
-
-`-I, --input-pcap=FILE` Input file  pcap_dump into ngrep.
-
-`-O, --output-pcap=FILE` Output packets to a pcap-compatible dump file.
-
-`-h, --help` Display help.
+| Argument | Description |
+| -------- | ----------- |
+|`-d DEVICE, --device DEVICE`|By default ngrep will select a default interface to listen on. Use this option to force ngrep to listen on interface DEVICE ('any' for all)|
+|`-F, --ngrep-filter`|ngrep filter (for details, see ngrep manual|
+|`-v NAME, --view=NAME`|Display view ('normal', 'pretty' or 'batch', default: normal)|
+|`-D SEC, --duration-threshold=SEC`|Match the requests higher than the threshold (in seconds with dot) (only used with '-f' and/or '-c')|
+|`-m, --regex-match=REGEX`|Match with regex in the request or/and the response content (only used with '-f' and/or '-c')|
+|`--request-regex-match=REGEX`|Match with regex in the request content (only used with '-f' and/or '-c')|
+|`--response-regex-match=REGEX`|Match with regex in the response content (only used with '-f' and/or '-c')|
+|`-i, --ignore-case-match`|Ignore case distinctions in matching|
+|`-f, --filter-match`|Display only the requests that are matched|
+|`-c, --color`|Active colorization|
+|`-l, --by-line`|Display content line by line|
+|`-t, --translate-ip`|If possible, host lookup (warning: if lookup is too slow, it will be automaticaly disabled)|
+|`-S SIZE, --content-size=SIZE`|Limit the string size (display only) of content|
+|`--request-content-size=SIZE`|Limit the string size (display only) of request content|
+|`--response-content-size=SIZE`|Limit the string size (display only) of response content|
+|`--no-response-content`|Don't display the request content (disabled in batch view)|
+|`-I, --input-pcap=FILE`|Input file pcap_dump into ngrep|
+|`-O, --output-pcap=FILE`|Output packets to a pcap-compatible dump file|
+|`-X, --extra`|Display extra statistics for all and matched requests|
+|`--extra-all`|Display extra statistics for all requests|
+|`--extra-match`|Display extra statistics for matched requests|
+|`-h, --help`|Display help|
 
 ## Examples
 
