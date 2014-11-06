@@ -28,10 +28,11 @@ For services that are not in this database, you can add them into the dictionnar
 
 ```
 services_custom = {
-    'T81': 'www',
+    'T81': 'http',
     'T3307': 'mysql',
-    'T8080': 'www',
-    'T8081': 'www',
+    'T6081': 'mysql',
+    'T8080': 'http',
+    'T8081': 'http',
     'T61613': 'activemq',
     'T61616': 'activemq'
 }
