@@ -179,6 +179,25 @@ def display_stats():
 
 
 def extra_stat_display(extra_stat):
+    """Display extra information in statistics."""
+
+    def mysql_extra_stat_display(command_name):
+        """Display mysql extra information in statistics."""
+
+        for command in sorted(extra_stat[service][command_name]):
+            average = extra_stat[service][command_name][command]['duration'] / \
+                extra_stat[service][command_name][command]['count']
+            if len(command) <= 30:
+                print "%15s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
+                    % (' ', command, extra_stat[service][command_name][command]['count'],
+                       extra_stat[service][command_name][command]['duration'], average,
+                       extra_stat[service][command_name][command]['max'])
+            else:
+                print "%15s-> %-30s :\n%50s %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
+                    % (' ', command, ' ', extra_stat[service][command_name][command]['count'],
+                       extra_stat[service][command_name][command]['duration'], average,
+                       extra_stat[service][command_name][command]['max'])
+
     for service in extra_stat:
         m = re.match('^http$|^http_', service)
         if m:
@@ -204,28 +223,10 @@ def extra_stat_display(extra_stat):
             print "%5s-> %s" % ('', service)
             if 'command' in extra_stat[service]:
                 print "%10s-> Commands" % ' '
-                for command in sorted(extra_stat[service]['command']):
-                    average = extra_stat[service]['command'][command]['duration'] / \
-                        extra_stat[service]['command'][command]['count']
-                    print "%15s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
-                        % (' ', command, extra_stat[service]['command'][command]['count'],
-                           extra_stat[service]['command'][command]['duration'], average,
-                           extra_stat[service]['command'][command]['max'])
+                mysql_extra_stat_display('command')
             if 'select' in extra_stat[service]:
                 print "%10s-> Command 'SELECT' details (database.table)" % ' '
-                for select in sorted(extra_stat[service]['select']):
-                    average = extra_stat[service]['select'][select]['duration'] / \
-                        extra_stat[service]['select'][select]['count']
-                    if len(select) <= 30:
-                        print "%15s-> %-30s : %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
-                            % (' ', select, extra_stat[service]['select'][select]['count'],
-                               extra_stat[service]['select'][select]['duration'], average,
-                               extra_stat[service]['select'][select]['max'])
-                    else:
-                        print "%15s-> %-30s :\n%55s %6s request(s) in %0.5fs (average: %0.5fs, max: %0.5fs)" \
-                            % (' ', select, ' ', extra_stat[service]['select'][select]['count'],
-                               extra_stat[service]['select'][select]['duration'], average,
-                               extra_stat[service]['select'][select]['max'])
+                mysql_extra_stat_display('select')
 
 
 def signal_end(signum, frame):
@@ -244,6 +245,8 @@ def process():
     """Consolidate packets data."""
 
     def mysql_extra_process(extra_stat):
+        """Get mysql extra information for statistics."""
+
         if 'mysql_command' in data['request']:
             mysql_command = data['request']['mysql_command']
             mysql_command_select = None
@@ -285,6 +288,8 @@ def process():
                     extra_stat['mysql']['select'][mysql_command_select]['max'] = duration
 
     def http_extra_process(extra_stat):
+        """Get http extra information for statistics."""
+
         m = re.search(r'X-Varnish: \d+\%s' % non_printable_char, content, re.DOTALL)
         if m:
             data['response']['http_varnish_caching'] = 'MISS'
