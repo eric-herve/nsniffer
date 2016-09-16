@@ -72,7 +72,7 @@ Arguments:
     print "Examples :"
     print
     print r"  # %s -d any -tlc --no-response-content" % script_name
-    print r"  # %s -d any -Xlc -F 'host 1.2.3.4' -v pretty -f -E 'request_content "GET|POST"'" % script_name
+    print r"  # %s -d any -Xlc -F 'host 1.2.3.4' -v pretty -f -E 'request_content \"GET|POST\"'" % script_name
     print r"  # %s -d any -Xtlc -F 'port 80' -v batch -f -E 'not http_status_code \"2\d{2}|3\d{2}\" and duration greater 1'" % script_name
     print r"  # %s -d any -Xtlc -f -E 'mysql_method \"INSERT\"' --response-content-size=50" % script_name
     print r"  # %s -d any -Xtlc -f -E 'service \"mysql\" and duration range 1.5-2.5'" % script_name
