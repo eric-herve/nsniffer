@@ -1,3 +1,6 @@
+OBSOLETE
+
+
 # nsniffer.py
 
 ## About
